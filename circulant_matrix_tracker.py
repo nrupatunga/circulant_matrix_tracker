@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# !/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """
@@ -18,7 +18,6 @@ from __future__ import print_function
 
 import os
 import os.path
-import sys
 import glob
 import time
 from optparse import OptionParser
@@ -27,6 +26,7 @@ import scipy.misc
 import pylab
 
 debug = False
+
 
 class CirculantMatrixTracker:
 
@@ -72,25 +72,35 @@ def load_video_info(video_path):
     assert text_files, \
         "No initial position and ground truth (*_gt.txt) to load."
 
-    first_file_path = os.path.join(video_path, text_files[0])
-    #f = open(first_file_path, "r")
-    #ground_truth = textscan(f, '%f,%f,%f,%f') # [x, y, width, height]
-    #ground_truth = cat(2, ground_truth{:})
+    # first_file_path = os.path.join(video_path, text_files[0])
+    first_file_path = text_files[0]
+    # f = open(first_file_path, "r")
+    # ground_truth = textscan(f, '%f,%f,%f,%f') # [x, y, width, height]
+    # ground_truth = cat(2, ground_truth{:})
     ground_truth = pylab.loadtxt(first_file_path, delimiter=",")
-    #f.close()
+    # f.close()
 
     # set initial position and size
     first_ground_truth = ground_truth[0, :]
     # target_sz contains height, width
+    __import__('pdb').set_trace()
     target_sz = pylab.array([first_ground_truth[3], first_ground_truth[2]])
     # pos contains y, x center
-    pos = [first_ground_truth[1], first_ground_truth[0]] \
-        + pylab.floor(target_sz / 2)
+    pos = [first_ground_truth[1], first_ground_truth[0]] + pylab.floor(target_sz / 2)
 
-    #try:
+    # try:
     if True:
         # interpolate missing annotations
         # 4 out of each 5 frames is filled with zeros
+        # nrupatunga: if you see the surfer_gt.txt, you can see the
+        # ground truth boxes are only there for every 5th frame, in
+        # order to get the boxes for intermediate frame, we can linearly
+        # interpolate, thats what the below code is doing
+
+        # once the groundtruth box are interpolated, we only store the
+        # centre of those boxes, This might be how at the end how those
+        # red dots are shown in the plots
+
         for i in range(4):  # x, y, width, height
             xp = range(0, ground_truth.shape[0], 5)
             fp = ground_truth[xp, i]
@@ -98,10 +108,10 @@ def load_video_info(video_path):
             ground_truth[:, i] = pylab.interp(x, xp, fp)
         # store positions instead of boxes
         ground_truth = ground_truth[:, [1, 0]] + ground_truth[:, [3, 2]] / 2
-    #except Exception as e:
+    # except Exception as e:
     else:
         print("Failed to gather ground truth data")
-        #print("Error", e)
+        # print("Error", e)
         # ok, wrong format or we just don't have ground truth data.
         ground_truth = []
 
@@ -111,11 +121,12 @@ def load_video_info(video_path):
 
     text_files = glob.glob(os.path.join(video_path, "*_frames.txt"))
     if text_files:
-        first_file_path = os.path.join(video_path, text_files[0])
-        #f = open(first_file_path, "r")
-        #frames = textscan(f, '%f,%f')
+        # first_file_path = os.path.join(video_path, text_files[0])
+        first_file_path = text_files[0]
+        # f = open(first_file_path, "r")
+        # frames = textscan(f, '%f,%f')
         frames = pylab.loadtxt(first_file_path, delimiter=",", dtype=int)
-        #f.close()
+        # f.close()
 
         # see if they are in the 'imgs' subfolder or not
         test1_path_to_img = os.path.join(video_path,
@@ -132,8 +143,8 @@ def load_video_info(video_path):
         # list the files
         img_files = ["img%05i.png" % i
                      for i in range(frames[0], frames[1] + 1)]
-        #img_files = num2str((frames{1} : frames{2})', 'img%05i.png')
-        #img_files = cellstr(img_files);
+        # img_files = num2str((frames{1} : frames{2})', 'img%05i.png')
+        # img_files = cellstr(img_files);
     else:
         # no text file, just list all images
         img_files = glob.glob(os.path.join(video_path, "*.png"))
@@ -179,9 +190,9 @@ def get_subwindow(im, pos, sz, cos_window):
         sz = [sz, sz]
 
     ys = pylab.floor(pos[0]) \
-        + pylab.arange(sz[0], dtype=int) - pylab.floor(sz[0]/2)
+        + pylab.arange(sz[0], dtype=int) - pylab.floor(sz[0] / 2)
     xs = pylab.floor(pos[1]) \
-        + pylab.arange(sz[1], dtype=int) - pylab.floor(sz[1]/2)
+        + pylab.arange(sz[1], dtype=int) - pylab.floor(sz[1] / 2)
 
     ys = ys.astype(int)
     xs = xs.astype(int)
@@ -193,10 +204,10 @@ def get_subwindow(im, pos, sz, cos_window):
 
     xs[xs < 0] = 0
     xs[xs >= im.shape[1]] = im.shape[1] - 1
-    #zs = range(im.shape[2])
+    # zs = range(im.shape[2])
 
     # extract image
-    #out = im[pylab.ix_(ys, xs, zs)]
+    # out = im[pylab.ix_(ys, xs, zs)]
     out = im[pylab.ix_(ys, xs)]
 
     if debug:
@@ -205,7 +216,7 @@ def get_subwindow(im, pos, sz, cos_window):
         pylab.imshow(out, cmap=pylab.cm.gray)
         pylab.title("cropped subwindow")
 
-    #pre-process window --
+    # pre-process window --
     # normalize to range -0.5 .. 0.5
     # pixels are already in range 0 to 1
     out = out.astype(pylab.float64) - 0.5
@@ -247,8 +258,8 @@ def dense_gauss_kernel(sigma, x, y=None):
 
     # to spatial domain
     xyf_ifft = pylab.ifft2(xyf)
-    #xy_complex = circshift(xyf_ifft, floor(x.shape/2))
-    row_shift, col_shift = pylab.floor(pylab.array(x.shape)/2).astype(int)
+    # xy_complex = circshift(xyf_ifft, floor(x.shape/2))
+    row_shift, col_shift = pylab.floor(pylab.array(x.shape) / 2).astype(int)
     xy_complex = pylab.roll(xyf_ifft, row_shift, axis=0)
     xy_complex = pylab.roll(xy_complex, col_shift, axis=1)
     xy = pylab.real(xy_complex)
@@ -259,8 +270,8 @@ def dense_gauss_kernel(sigma, x, y=None):
     xx_yy_2xy = xx_yy - 2 * xy
     k = pylab.exp(scaling * pylab.maximum(0, xx_yy_2xy / x.size))
 
-    #print("dense_gauss_kernel x.shape ==", x.shape)
-    #print("dense_gauss_kernel k.shape ==", k.shape)
+    # print("dense_gauss_kernel x.shape ==", x.shape)
+    # print("dense_gauss_kernel k.shape ==", k.shape)
 
     return k
 
@@ -289,7 +300,7 @@ def show_precision(positions, ground_truth, video_path, title):
     # calculate distances to ground truth over all frames
     delta = positions - ground_truth
     distances = pylab.sqrt((delta[:, 0]**2) + (delta[:, 1]**2))
-    #distances[pylab.isnan(distances)] = []
+    # distances[pylab.isnan(distances)] = []
 
     # compute precisions
     precisions = pylab.zeros((max_threshold, 1), dtype=float)
@@ -322,9 +333,9 @@ def plot_tracking(frame, pos, target_sz, im, ground_truth):
         z_figure_axes, response_figure_axes
 
     timeout = 1e-6
-    #timeout = 0.05  # uncomment to run slower
+    # timeout = 0.05  # uncomment to run slower
     if frame == 0:
-        #pylab.ion()  # interactive mode on
+        # pylab.ion()  # interactive mode on
         tracking_figure = pylab.figure()
         gs = pylab.GridSpec(1, 3, width_ratios=[3, 1, 1])
 
@@ -352,9 +363,9 @@ def plot_tracking(frame, pos, target_sz, im, ground_truth):
     elif tracking_figure is None:
         return  # we simply go faster by skipping the drawing
     elif not pylab.fignum_exists(tracking_figure.number):
-        #print("Drawing window closed, end of game. "
+        # print("Drawing window closed, end of game. "
         #      "Have a nice day !")
-        #sys.exit()
+        # sys.exit()
         print("From now on drawing will be omitted, "
               "so that computation goes faster")
         tracking_figure = None
@@ -363,7 +374,7 @@ def plot_tracking(frame, pos, target_sz, im, ground_truth):
     global z, response
     tracking_figure_axes.imshow(im, cmap=pylab.cm.gray)
 
-    rect_y, rect_x = tuple(pos - target_sz/2.0)
+    rect_y, rect_x = tuple(pos - target_sz / 2.0)
     rect_height, rect_width = target_sz
     tracking_rectangle.set_xy((rect_x, rect_y))
     tracking_rectangle.set_width(rect_width)
@@ -386,7 +397,7 @@ def plot_tracking(frame, pos, target_sz, im, ground_truth):
     if debug and False and (frame % 1) == 0:
         print("Tracked pos ==", pos)
 
-    #tracking_figure.canvas.draw()  # update
+    # tracking_figure.canvas.draw()  # update
     pylab.draw()
     pylab.waitforbuttonpress(timeout=timeout)
 
@@ -400,7 +411,7 @@ def track(input_video_path):
 
     # parameters according to the paper --
     padding = 1.0  # extra area surrounding the target
-    #spatial bandwidth (proportional to target)
+    # spatial bandwidth (proportional to target)
     output_sigma_factor = 1 / float(16)
     sigma = 0.2  # gaussian kernel bandwidth
     lambda_value = 1e-2  # regularization
@@ -417,14 +428,14 @@ def track(input_video_path):
     # desired output (gaussian shaped), bandwidth proportional to target size
     output_sigma = pylab.sqrt(pylab.prod(target_sz)) * output_sigma_factor
 
-    grid_y = pylab.arange(sz[0]) - pylab.floor(sz[0]/2)
-    grid_x = pylab.arange(sz[1]) - pylab.floor(sz[1]/2)
-    #[rs, cs] = ndgrid(grid_x, grid_y)
+    grid_y = pylab.arange(sz[0]) - pylab.floor(sz[0] / 2)
+    grid_x = pylab.arange(sz[1]) - pylab.floor(sz[1] / 2)
+    # [rs, cs] = ndgrid(grid_x, grid_y)
     rs, cs = pylab.meshgrid(grid_x, grid_y)
     y = pylab.exp(-0.5 / output_sigma**2 * (rs**2 + cs**2))
     yf = pylab.fft2(y)
-    #print("yf.shape ==", yf.shape)
-    #print("y.shape ==", y.shape)
+    # print("yf.shape ==", yf.shape)
+    # print("y.shape ==", y.shape)
 
     # store pre-computed cosine window
     cos_window = pylab.outer(pylab.hanning(sz[0]),
@@ -449,7 +460,7 @@ def track(input_video_path):
         if len(im.shape) == 3 and im.shape[2] > 1:
             im = rgb2gray(im)
 
-        #print("Image max/min value==", im.max(), "/", im.min())
+        # print("Image max/min value==", im.max(), "/", im.min())
 
         if should_resize_image:
             im = scipy.misc.imresize(im, 0.5)
@@ -471,7 +482,7 @@ def track(input_video_path):
             # target location is at the maximum response
             r = response
             row, col = pylab.unravel_index(r.argmax(), r.shape)
-            pos = pos - pylab.floor(sz/2) + [row, col]
+            pos = pos - pylab.floor(sz / 2) + [row, col]
 
             if debug:
                 print("Frame ==", frame)
@@ -502,7 +513,7 @@ def track(input_video_path):
         new_z = x
 
         if is_first_frame:
-            #first frame, train with a single image
+            # first frame, train with a single image
             alphaf = new_alphaf
             z = x
         else:
@@ -547,7 +558,7 @@ def parse_arguments():
                       help="path to a folder o a MILTrack video")
 
     (options, args) = parser.parse_args()
-    #print (options, args)
+    # print (options, args)
 
     if not options.video_path:
         parser.error("'input' option is required to run this program")
